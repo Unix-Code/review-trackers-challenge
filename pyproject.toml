@@ -1,0 +1,60 @@
+[tool.poetry]
+name = "review-trackers-challenge"
+version = "0.1.0"
+description = ""
+authors = ["David Malakh <dmalakh@comcast.net>"]
+readme = "README.md"
+packages = [{include = "review_trackers_challenge"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flask = "^2.3.2"
+requests = "^2.31.0"
+marshmallow = "^3.19.0"
+flask-marshmallow = "^0.15.0"
+marshmallow-generic = "^1.0.1"
+beautifulsoup4 = "^4.12.2"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+isort = "^5.12.0"
+pytest = "^7.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+    | migrations
+    | legacy
+  )/
+)
+'''
+
+[tool.isort]
+py_version=310
+profile = "black"
+skip_glob = ["legacy/*", "migrations/*"]
+
+[tool.pytest.ini_options]
+python_functions = "test_*"
+testpaths = [
+    "tests"
+]
