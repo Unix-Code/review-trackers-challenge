@@ -23,7 +23,9 @@ class ReviewParser:
 
     # Something akin to this: "... <name> from <location> ..."
     #                         "    {Bruno} from {Fort Worth,  TX}    "
-    AUTHOR_PATTERN = re.compile(r"\s*(?P<name>\S+) +from +(?P<location>[a-zA-Z ]+, +[A-Z]{2})\s*")
+    AUTHOR_PATTERN = re.compile(
+        r"\s*(?P<name>(?:\S+)\s*(?:\S+)) +from +(?P<location>[a-zA-Z ]+, +[A-Z]{2})\s*"
+    )
 
     # Something akin to this: "... Reviewed in February 2018 ..."
     REVIEW_DATE_PATTERN = re.compile(r"\s*Reviewed in (?P<month>[a-zA-Z]+) (?P<year>\d{4})\s*")

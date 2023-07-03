@@ -67,6 +67,10 @@ class TestParser:
                 "\n  Some'Name from Boston,  MA  \n  ",
                 {"name": "Some'Name", "location": "Boston,  MA"},
             ),
+            (
+                "\n  Some  Name from Brookline,  MA  \n  ",
+                {"name": "Some  Name", "location": "Brookline,  MA"},
+            ),
         ),
     )
     def test_valid_author(self, load_fixture, author_text, expected_value):
