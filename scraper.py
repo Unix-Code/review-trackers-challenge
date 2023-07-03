@@ -1,6 +1,7 @@
 import calendar
 import logging
 import re
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from enum import Enum
@@ -130,9 +131,10 @@ class LendingTreeScraper:
     REVIEW_SECTION_SELECTOR = ".mainReviews"
     CURRENT_PAGE_NUMBER_SELECTOR = ".pageNum .page-link"
 
-    def __init__(self, request_timeout_sec: int = 15):
+    def __init__(self, request_timeout_sec: int = 25, page_retry_count: int = 3):
         self.req_session = requests.Session()
         self.request_timeout_sec = request_timeout_sec
+        self.page_retry_count = page_retry_count
 
     def _parse_page_number_from_page_content(self, page: BeautifulSoup) -> Optional[int]:
         page_number_elem = page.select_one(self.CURRENT_PAGE_NUMBER_SELECTOR)
@@ -144,14 +146,12 @@ class LendingTreeScraper:
         except ValueError:
             return None
 
-    def _collect_page_of_reviews_with_loaded_page(
-        self, business_name_slug: str, business_id: int, page_num: int
-    ) -> tuple[list[Review], int]:
+    def _perform_page_request(
+        self, business_name_slug: str, business_id: int, page_num: int, sort: str = MOST_RECENT_SORT
+    ):
         # We manually construct the query params, as LendTree is sensitive to the order of the
         # query params and there being an unencoded "=" at the end of the sort arg
-        query_params = (
-            f"?{self.SORT_PARAM}={self.MOST_RECENT_SORT}&{self.PAGINATION_PARAM}={page_num}"
-        )
+        query_params = f"?{self.SORT_PARAM}={sort}&{self.PAGINATION_PARAM}={page_num}"
 
         request_url = self.URL_ARG_PATTERN.format(
             business_name_slug=business_name_slug,
@@ -167,9 +167,38 @@ class LendingTreeScraper:
             # TODO: Handle response in error
             raise CommunicationError(response.url)
 
-        soup = BeautifulSoup(response.text, "lxml")
+        return response
 
-        loaded_page = self._parse_page_number_from_page_content(soup)
+    def _collect_page_of_reviews_with_loaded_page(
+        self, business_name_slug: str, business_id: int, page_num: int
+    ) -> tuple[list[Review], int]:
+        attempt = 0
+        finished = False
+        while not finished and attempt < self.page_retry_count:
+            # See below for more detailed info. It was observed that the rate-limiting/IP-blocking
+            # can be circumvented by hitting a slightly different URL. The easiest method to
+            # accomplish that seems to be setting an arbitrary invalid sort (which will default to
+            # the most recent sort anyway).
+            sort = self.MOST_RECENT_SORT if attempt == 0 else uuid.uuid4()
+            response = self._perform_page_request(business_name_slug, business_id, page_num, sort)
+
+            soup = BeautifulSoup(response.text, "lxml")
+
+            loaded_page = self._parse_page_number_from_page_content(soup)
+
+            if loaded_page is None:
+                # NOTE: There are certain strange occurrences where pages that are within
+                # the min and max pages but will still load as containing 0 reviews
+                # and with an un-parseable page number. This seems to be LendingTree's method of
+                # IP-blocking (tested on a different network and these pages started to work)
+                logger.warning(
+                    "It seems that we may be IP-blocked temporarily while requesting %s",
+                    response.url,
+                )
+            else:
+                finished = True
+
+            attempt += 1
 
         return (
             [
@@ -212,10 +241,6 @@ class LendingTreeScraper:
             )
 
             if max_page is None:
-                # NOTE: There are certain strange pages that are within
-                # the min and max pages but will still load as containing 0 reviews
-                # and with an un-parseable page number.
-                # (e.g. .../ondeck/51886298?sort=cmV2aWV3c3VibWl0dGVkX2Rlc2M=&pid=39 )
                 logger.warning(
                     "Unable to load maximum page. Will be collecting only up to first 'empty' page"
                 )
