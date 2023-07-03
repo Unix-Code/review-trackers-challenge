@@ -163,7 +163,7 @@ class LendingTreeScraper:
 
         if response.status_code != HTTPStatus.OK:
             # TODO: Handle response in error
-            raise CommunicationError(response)
+            raise CommunicationError(response.url)
 
         soup = BeautifulSoup(response.text, "lxml")
 
