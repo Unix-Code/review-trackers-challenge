@@ -193,7 +193,6 @@ class LendingTreeScraper:
         result = []
         finished = False
         current_batch = 0
-        max_page = None
         # Lending Tree performs server-side rendering, thus having no nicely accessible API to hit
         # with structured requests and that will report pagination information.
         # Instead, we will be performing some scraping.
@@ -206,11 +205,10 @@ class LendingTreeScraper:
 
             # Since LendingTree will clamp to the max page when requesting a page that's greater,
             # we perform an initial request with an absurdly large page number to retrieve the max
-            page_result, loaded_page = self._collect_page_of_reviews_with_loaded_page(
+            page_result, max_page = self._collect_page_of_reviews_with_loaded_page(
                 business_name_slug, business_id, 999999999999999999
             )
-            result.extend(page_result)
-            max_page = loaded_page
+
             if max_page is None:
                 # NOTE: There are certain strange pages that are within
                 # the min and max pages but will still load as containing 0 reviews
