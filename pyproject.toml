@@ -10,10 +10,8 @@ packages = [{include = "review_trackers_challenge"}]
 python = "^3.10"
 flask = "^2.3.2"
 requests = "^2.31.0"
-marshmallow = "^3.19.0"
-flask-marshmallow = "^0.15.0"
-marshmallow-generic = "^1.0.1"
 beautifulsoup4 = "^4.12.2"
+lxml = "^4.9.2"
 
 
 [tool.poetry.group.dev.dependencies]
