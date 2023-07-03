@@ -1,9 +1,18 @@
+from http import HTTPStatus
+
 from flask import Flask, jsonify, request
-from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import BadRequest, HTTPException
 
 from scraper import LendingTreeScraper
 
 app = Flask(__name__)
+
+
+@app.errorhandler(Exception)
+def handle_generic_error(e):
+    return {"error": str(e)}, (
+        e.code if isinstance(e, HTTPException) else HTTPStatus.INTERNAL_SERVER_ERROR
+    )
 
 
 @app.post("/")
